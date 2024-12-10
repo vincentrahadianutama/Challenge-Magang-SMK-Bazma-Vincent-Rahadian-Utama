@@ -91,12 +91,14 @@ class BookController extends Controller
         ]);
 
         try {
-            Excel::import(new BooksImport, $request->file('file'));
-            return redirect()->back()->with('success', 'Books imported successfully!');
+            \Maatwebsite\Excel\Facades\Excel::import(new BooksImport, $request->file('file'));
+            return redirect()->route('books.index')->with('success', 'Books imported successfully!');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Failed to import books: ' . $e->getMessage());
+            return redirect()->route('books.index')->with('error', 'Failed to import books: ' . $e->getMessage());
         }
     }
+
+
     
     public function destroy(Book $book)
     {

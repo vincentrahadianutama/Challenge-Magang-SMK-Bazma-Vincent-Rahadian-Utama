@@ -9,6 +9,20 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
+    @if(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+
+    <!-- Form untuk impor file -->
+    <form action="{{ route('books.import') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+        @csrf
+        <div class="form-group">
+            <label for="file">Import Books</label>
+            <input type="file" name="file" id="file" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-success mt-2">Import</button>
+    </form>
+
     <button id="exportExcel" class="btn btn-info mb-3">Export to Excel</button>
 
     <table class="table table-bordered" id="bookTable">

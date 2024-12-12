@@ -8,6 +8,7 @@ use App\Imports\BooksImport;
 use App\Models\BookCategory;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Excel;
+use Illuminate\Support\Facades\Storage;
 
 class BookController extends Controller
 {
@@ -29,33 +30,29 @@ class BookController extends Controller
         return view('books.create', compact('categories'));
     }
 
+    
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string',
             'book_category_id' => 'required|exists:book_categories,id',
-            'author' => 'required|string|max:255',
             'description' => 'required|string',
-            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // Validasi file gambar
+            'author' => 'required|string',
+            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // Proses unggah gambar
-        $thumbnailPath = null;
+        $book = new Book($request->except('thumbnail'));
+
+        // Upload gambar thumbnail jika ada
         if ($request->hasFile('thumbnail')) {
-            $thumbnailPath = $request->file('thumbnail')->store('thumbnails', 'public');
+            $book->thumbnail = $request->file('thumbnail')->store('book_thumbnails', 'public');
         }
 
-        // Simpan data buku
-        Book::create([
-            'name' => $request->name,
-            'book_category_id' => $request->book_category_id,
-            'author' => $request->author,
-            'description' => $request->description,
-            'thumbnail' => $thumbnailPath, // Simpan path gambar
-        ]);
+        $book->save();
 
         return redirect()->route('books.index')->with('success', 'Book added successfully!');
     }
+
 
 
     public function edit(Book $book)
@@ -67,20 +64,28 @@ class BookController extends Controller
     public function update(Request $request, Book $book)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string',
             'book_category_id' => 'required|exists:book_categories,id',
-            'description' => 'nullable|string',
-            'author' => 'required|string|max:255',
+            'description' => 'required|string',
+            'author' => 'required|string',
+            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        $book->update($request->all());
+        $book->fill($request->except('thumbnail'));
+
+        // Periksa dan upload gambar baru jika ada
+        if ($request->hasFile('thumbnail')) {
+            // Hapus gambar lama jika ada
+            if ($book->thumbnail) {
+                Storage::disk('public')->delete($book->thumbnail);
+            }
+
+            $book->thumbnail = $request->file('thumbnail')->store('book_thumbnails', 'public');
+        }
+
+        $book->save();
 
         return redirect()->route('books.index')->with('success', 'Book updated successfully!');
-    }
-
-    public function export($id)
-    {
-        return Excel::download(new BooksExport, 'books.xlsx');
     }
 
     // Method untuk mengimpor data buku
@@ -102,9 +107,14 @@ class BookController extends Controller
     
     public function destroy(Book $book)
     {
-        
+        // Hapus gambar jika ada
+        if ($book->thumbnail) {
+            Storage::disk('public')->delete($book->thumbnail);
+        }
+
         $book->delete();
 
         return redirect()->route('books.index')->with('success', 'Book deleted successfully!');
     }
+
 }
